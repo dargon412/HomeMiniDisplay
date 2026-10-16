@@ -35,3 +35,7 @@ python3 -m http.server 8000
 - `docs/DEPLOY-PI.md` — host it on a Raspberry Pi with shared data + remote access
 - `docs/DEVELOPMENT.md` — conventions, release/caching, debugging
 - `AGENTS.md` — orientation for AI agents working in this repo
+
+## License
+
+[MIT](LICENSE)
