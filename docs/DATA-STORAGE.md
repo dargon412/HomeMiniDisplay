@@ -102,6 +102,10 @@ Event text is rendered with `textContent`, so it is safe against HTML injection.
 
 ## Backup and restore
 
+> **Raspberry Pi hosts:** if you run the optional `server/`, the shared data
+> lives in `server/data/state.json` and the front-end syncs it automatically.
+> The export/import below still works and is the easiest way to move data.
+
 The settings page (**⚙️ → 備份**) provides:
 
 | Button | Effect |

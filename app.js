@@ -11,7 +11,7 @@
 
 /* Bump this whenever you change the app, so you can tell which build a
    device is running (shown in ⚙️ settings and logged on load). */
-var APP_VERSION = '2026-10-02.28';
+var APP_VERSION = '2026-10-16.1';
 
 /* ---------------- on-device tap diagnostics ----------------
    Open the page with ?debug=1 (e.g. .../HomeMiniDisplay/?debug=1)
@@ -615,6 +615,7 @@ function loadEvents() {
 function saveEvents(obj) {
   try { localStorage.setItem(EVENTS_KEY, JSON.stringify(obj)); }
   catch (e) { /* storage full / private mode */ }
+  syncPush('events', obj);
 }
 
 /* ---- parrot weight: one value per day, keyed by YYYY-MM-DD (grams) ---- */
@@ -626,8 +627,112 @@ function loadWeights() {
 function saveWeights(obj) {
   try { localStorage.setItem(WEIGHTS_KEY, JSON.stringify(obj)); }
   catch (e) { /* storage full / private mode */ }
+  syncPush('weights', obj);
 }
 function hasWeight(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+
+/* ============================================================
+   3b. OPTIONAL SHARED-STATE SYNC (Raspberry Pi server)
+   ------------------------------------------------------------
+   When this page is served by server/server.py (e.g. through Tailscale Funnel)
+   a /api/state endpoint exists, and every device shares one dataset. On GitHub
+   Pages that endpoint 404s, so we quietly stay localStorage-only.
+
+   localStorage stays the instant, synchronous store; the server is synced in
+   the background (local-first), so the dashboard keeps working offline.
+   ============================================================ */
+var SYNC_ON = false;
+var SYNC_REV = 0;
+var SYNC_APPLYING = false;
+
+function syncApplyState(state) {
+  SYNC_APPLYING = true;
+  try {
+    if (state.config) localStorage.setItem('homeDashboard.config.v1', JSON.stringify(state.config));
+    if (state.events) localStorage.setItem(EVENTS_KEY, JSON.stringify(state.events));
+    if (state.weights) localStorage.setItem(WEIGHTS_KEY, JSON.stringify(state.weights));
+  } catch (e) { /* private mode */ }
+  SYNC_REV = state.rev || 0;
+  SYNC_APPLYING = false;
+}
+
+/* Re-read the freshly applied config and rebuild the screen. */
+function syncRerender() {
+  CFG = (window.DashboardConfig && window.DashboardConfig.load) ? window.DashboardConfig.load() : CFG;
+  normalizeConfig();
+  applyLayout();
+  renderCalendar();
+  buildBusSkeleton();
+  loadBus();
+}
+
+/* Pull the server state; re-render if it changed. */
+function syncPull(force) {
+  if (!SYNC_ON) return;
+  fetch('/api/state', { credentials: 'same-origin', cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (state) {
+      if (!state || typeof state.rev === 'undefined') return;
+      if (!force && state.rev === SYNC_REV) return;
+      syncApplyState(state);
+      syncRerender();
+    })
+    .catch(function () { /* offline: keep using localStorage */ });
+}
+
+function syncPush(collection, value) {
+  if (!SYNC_ON || SYNC_APPLYING) return;
+  fetch('/api/' + collection, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value)
+  })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (j) { if (j && typeof j.rev !== 'undefined') SYNC_REV = j.rev; })
+    .catch(function () { /* offline: the local copy is still saved */ });
+}
+
+function syncLocalHasData() {
+  try {
+    if (localStorage.getItem('homeDashboard.config.v1')) return true;
+    if (localStorage.getItem(EVENTS_KEY)) return true;
+    if (localStorage.getItem(WEIGHTS_KEY)) return true;
+  } catch (e) {}
+  return false;
+}
+
+function detectSync() {
+  fetch('/api/state', { credentials: 'same-origin', cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (state) {
+      SYNC_ON = true;
+      var hasEvents = state.events && Object.keys(state.events).length;
+      var hasWeights = state.weights && Object.keys(state.weights).length;
+      var empty = !state || (!state.config && !hasEvents && !hasWeights);
+      if (empty && syncLocalHasData()) {
+        // First device to reach a fresh server seeds it from its local data.
+        SYNC_REV = state.rev || 0;
+        syncPush('config', CFG);
+        syncPush('events', loadEvents());
+        syncPush('weights', loadWeights());
+      } else if (state.rev !== SYNC_REV) {
+        syncApplyState(state);
+        syncRerender();
+      } else {
+        SYNC_REV = state.rev || 0;
+      }
+      setInterval(function () { if (!isInteracting()) syncPull(false); }, 15000);
+    })
+    .catch(function () { SYNC_ON = false; });
+}
+
+/* Settings.js (loaded before this file) pushes config changes through here. */
+window.Sync = {
+  pushConfig: function (cfg) { syncPush('config', cfg); },
+  pull: function () { syncPull(true); },
+  status: function () { return { on: SYNC_ON, rev: SYNC_REV }; }
+};
 
 /* 4-day roster: compute the shift letter for a given date. */
 function rosterLetter(date) {
@@ -1235,6 +1340,9 @@ function start() {
   loadBus();
   loadWeather();
   scheduleRefresh();
+
+  // If a Raspberry Pi server is serving this page, enable shared-state sync.
+  detectSync();
 
   setInterval(tickClock, 1000);
 

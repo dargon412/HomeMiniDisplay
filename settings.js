@@ -56,6 +56,8 @@
   function save(cfg) {
     try { localStorage.setItem(KEY, JSON.stringify(cfg)); }
     catch (e) { alert('儲存失敗：' + e.message); }
+    // If the Pi server is serving this page, share the change with other devices.
+    if (window.Sync && window.Sync.pushConfig) window.Sync.pushConfig(cfg);
   }
 
   function reset() { localStorage.removeItem(KEY); }
@@ -537,6 +539,32 @@
   /* ============================================================
      BACKUP
      ============================================================ */
+  /* ============================================================
+     SYNC (Raspberry Pi shared state)
+     ============================================================ */
+  function sectionSync() {
+    var s = makeSection('同步 Sync');
+    var st = (window.Sync && window.Sync.status) ? window.Sync.status() : { on: false, rev: 0 };
+    var info = document.createElement('p');
+    info.className = 'sf-hint';
+    if (st.on) {
+      info.textContent = '✅ 已連線 Raspberry Pi — 活動、體重、設定會同其他裝置共用（rev ' + st.rev + '）。';
+    } else {
+      info.textContent = '未啟用：此頁唔係由 Pi server 提供（例如 GitHub Pages），資料只存喺本機。';
+    }
+    s.body.appendChild(info);
+    if (st.on) {
+      var row = document.createElement('div');
+      row.className = 'sf-row';
+      row.appendChild(button('🔄 立即同步 Sync now', 'ghost', function () {
+        if (window.Sync) window.Sync.pull();
+        alert('已向 Pi 拉取最新資料。');
+      }));
+      s.body.appendChild(row);
+    }
+    return s.el;
+  }
+
   function sectionBackup() {
     var s = makeSection('備份 Backup');
 
@@ -718,6 +746,7 @@
     body.appendChild(sectionGeneral());
     body.appendChild(sectionRoster());
     body.appendChild(sectionStops());
+    body.appendChild(sectionSync());
     body.appendChild(sectionBackup());
     panel.appendChild(body);
 

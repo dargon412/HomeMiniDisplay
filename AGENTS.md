@@ -9,6 +9,11 @@ build step, no dependencies, no package manager.** Plain HTML/CSS/JS served stat
 Pages; the browser calls Hong Kong government open-data APIs directly. Do not introduce a bundler,
 npm, or a framework.
 
+There is an **optional** self-hosted sync server (`server/server.py`, Python standard library only)
+for sharing one dataset across devices on a Raspberry Pi. It is not needed for the static app and
+must not become a dependency of it. The front-end probes `GET /api/state`: present → sync on,
+absent (GitHub Pages) → localStorage only. See `docs/DEPLOY-PI.md`.
+
 - Live: <https://dargon412.github.io/HomeMiniDisplay/>
 - Repo: `git@github.com:dargon412/HomeMiniDisplay.git` (remote `origin`, branch `main`)
 
@@ -38,6 +43,7 @@ and `window.openSettings` *before* `app.js` reads them. Keep the order if you to
 | `settings.js` | The ⚙️ settings page; owns read/write of saved config. IIFE exposing 2 globals. |
 | `app.js` | Dashboard: clock, weather, bus, calendar, refresh scheduling. Sections marked by banner comments. |
 | `tools.html` | Standalone bus-stop finder (settings has its own now). |
+| `server/server.py` | Optional Pi server: static files + shared-state API + login. Stdlib only. |
 
 Customize-stop IDs come from `tools.html`; `docs/API.md` documents the exact endpoints.
 
@@ -59,8 +65,10 @@ Customize-stop IDs come from `tools.html`; `docs/API.md` documents the exact end
 - **Config defaults vs saved:** editing `config.js` does **not** change a device that already has
   saved settings — the localStorage copy wins. Reset via ⚙️ → 備份 → 還原 config.js 預設.
 - **Never commit personal data or secrets.** `config.js` should hold demo stops only; the user's
-  real stops/roster/events live in the device's `localStorage` (`homeDashboard.config.v1`,
-  `homeDashboard.events.v1`). The repo is public. The user has explicitly said "no surprise".
+  real stops/roster/events/weights live in the device's `localStorage` (`homeDashboard.config.v1`,
+  `homeDashboard.events.v1`, `homeDashboard.weights.v1`) or, with the Pi server, in
+  `server/data/` (git-ignored). Never commit `server/data/`, password hashes or cookie secrets.
+  The repo is public. The user has explicitly said "no surprise".
 - **Auto-refresh must keep pausing on interaction** — see `isInteracting()` / `scheduleRefresh()` in
   `app.js`. Any new timed refresh goes through the same guard.
 - **Blocking taps behind an overlay needs a capture-phase guard, not an in-handler check.** When the

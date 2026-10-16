@@ -32,6 +32,12 @@ This document explains how the Home Dashboard works, so you can safely change it
 can be a static site on GitHub Pages with zero running cost. All three APIs were verified to send
 `access-control-allow-origin: *`, which is what allows the browser to call them.
 
+**Optional self-hosted sync.** An optional `server/` (Python stdlib only) can serve the same files
+and store one shared copy of the data so several devices stay in step. The front-end probes
+`GET /api/state`; if it answers, sync turns on (local-first: localStorage is still the instant
+store, the server is synced in the background). On GitHub Pages the probe 404s and the app stays
+local-only, so the static build is unchanged. See `docs/DEPLOY-PI.md`.
+
 ## Files and their jobs
 
 | File | Responsiblity | Load order |

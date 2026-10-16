@@ -12,3 +12,12 @@ _diag.html
 
 # OS thumbnails
 Thumbs.db
+
+# Raspberry Pi server: real data + secrets. NEVER commit these.
+# state.json holds the family's config/events/weights; auth.json the password
+# hash; secret signs session cookies. The repo is public.
+server/data/
+__pycache__/
+*.pyc
+*.pem
+*.key

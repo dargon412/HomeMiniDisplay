@@ -7,6 +7,8 @@ calendar with addable events, and weather — all in one glance.
 - **Target device:** Samsung Galaxy Tab A9 (1340 × 800 landscape), Android Chrome/Firefox
 - **No backend, no build step, no dependencies.** Plain HTML/CSS/JS served from GitHub Pages.
   The browser calls Hong Kong government open-data APIs directly (KMB/LWB, Citybus, HKO).
+- **Optional self-hosted sync** on a Raspberry Pi, so several devices share one dataset
+  (see [`docs/DEPLOY-PI.md`](docs/DEPLOY-PI.md)). The static GitHub Pages build is unchanged.
 
 ## Features
 

@@ -6,6 +6,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Optional shared-state sync + a Raspberry Pi host.** A new dependency-free
+  Python server (`server/server.py`) serves the static files, stores one shared
+  copy of config/events/weights (`server/data/state.json`), and adds a
+  password login with a 1-year cookie. The front-end now **detects** the server
+  (`GET /api/state`): when present it syncs in the background (local-first,
+  ~15 s poll, push on every save, seed the server from the first device), and
+  when absent (GitHub Pages) it stays localStorage-only. Remote access without
+  any phone app is via **Tailscale Funnel**. Full guide: `docs/DEPLOY-PI.md`.
+  Real data and secrets live only in `server/data/` and are git-ignored.
+- **⚙️ → 同步 Sync** section shows whether shared sync is active and offers a
+  manual "sync now".
 - **🦜 Parrot daily weight + line chart.** The event popup (tap any calendar day) now has a
   **鸚鵡體重 Parrot weight** section: enter grams and press 記錄. **One value per day** — entering a
   second value for the same day asks to overwrite. A recorded day can be deleted, and the calendar
