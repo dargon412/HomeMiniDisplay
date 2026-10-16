@@ -6,6 +6,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Hong Kong public holidays in the calendar.** Holidays are marked with a colour (tinted cell,
+  coloured border, day number and name) and shown in the day popup. Data comes from the official
+  1823 calendar, bundled as `holidays.json` (the 1823 endpoint has no CORS header, so the browser
+  cannot fetch it directly); on the Pi, `/api/holidays` refreshes it live and caches it weekly.
+  Refresh the bundled file with `python3 tools/update-holidays.py` when a new year is gazetted.
+- **⚙️ → 外觀 Theme: the public-holiday colour is user-configurable** (preset swatches + a colour
+  picker), applied live via the `--holiday` / `--holiday-soft` CSS variables, stored in
+  `theme.holidayColor` and included in the backup/import.
 - **Optional shared-state sync + a Raspberry Pi host.** A new dependency-free
   Python server (`server/server.py`) serves the static files, stores one shared
   copy of config/events/weights (`server/data/state.json`), and adds a

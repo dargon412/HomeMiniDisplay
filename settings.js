@@ -28,6 +28,7 @@
       roster: d.roster || { anchorDate: '', cycle: ['M', 'N', 'L', 'L'], labels: { M: '早', N: '夜', L: '休' } },
       refresh: d.refresh || { seconds: 30 },
       layout: d.layout || { busWidth: 20, fonts: { clock: 1, bus: 1, cal: 1, titles: 1 }, weatherWidth: 30 },
+      theme: d.theme || { holidayColor: '#ff5b5b' },
       busStops: d.busStops || []
     });
   }
@@ -49,6 +50,7 @@
       roster: Object.assign({}, base.roster, saved.roster || {}),
       refresh: Object.assign({}, base.refresh, saved.refresh || {}),
       layout: layout,
+      theme: Object.assign({}, base.theme, saved.theme || {}),
       busStops: Array.isArray(saved.busStops) ? saved.busStops : base.busStops
     };
   }
@@ -540,6 +542,65 @@
      BACKUP
      ============================================================ */
   /* ============================================================
+     THEME (colours)
+     ============================================================ */
+  function hexToRgbaLocal(hex, a) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return 'rgba(255,91,91,' + a + ')';
+    return 'rgba(' + parseInt(h.substr(0, 2), 16) + ',' + parseInt(h.substr(2, 2), 16) +
+      ',' + parseInt(h.substr(4, 2), 16) + ',' + a + ')';
+  }
+
+  function sectionTheme() {
+    var s = makeSection('外觀 Theme');
+    var cur = (working.theme && working.theme.holidayColor) || '#ff5b5b';
+
+    function apply(c) {
+      working.theme = working.theme || {};
+      working.theme.holidayColor = c;
+      document.documentElement.style.setProperty('--holiday', c);
+      document.documentElement.style.setProperty('--holiday-soft', hexToRgbaLocal(c, 0.14));
+    }
+
+    var color = document.createElement('input');
+    color.type = 'color';
+    color.className = 'inp color';
+    color.value = cur;
+    color.addEventListener('input', function () { apply(color.value); syncSwatches(); });
+
+    var presets = ['#ff5b5b', '#ff8a3d', '#ffd166', '#ff6f91', '#8b7cff', '#4da3ff', '#35c48a', '#ffffff'];
+    var swatchWrap = document.createElement('div');
+    swatchWrap.className = 'swatches';
+    var btns = [];
+    presets.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch';
+      b.style.background = c;
+      b.title = c;
+      tap(b, function () { color.value = c; apply(c); syncSwatches(); });
+      btns.push({ el: b, c: c });
+      swatchWrap.appendChild(b);
+    });
+    function syncSwatches() {
+      btns.forEach(function (b) {
+        if (b.c.toLowerCase() === color.value.toLowerCase()) b.el.classList.add('active');
+        else b.el.classList.remove('active');
+      });
+    }
+    syncSwatches();
+
+    var wrap = document.createElement('div');
+    wrap.className = 'range-wrap';
+    wrap.appendChild(color);
+    wrap.appendChild(swatchWrap);
+    s.body.appendChild(makeField('公眾假期顏色 Public holiday colour', wrap,
+      '公眾假期嗰日會用呢隻色顯示（揀色板或自選）'));
+    return s.el;
+  }
+
+  /* ============================================================
      SYNC (Raspberry Pi shared state)
      ============================================================ */
   function sectionSync() {
@@ -624,6 +685,7 @@
             roster: Object.assign({}, working.roster, cfg.roster || {}),
             refresh: Object.assign({}, working.refresh, cfg.refresh || {}),
             layout: impLayout,
+            theme: Object.assign({}, working.theme, cfg.theme || {}),
             busStops: cfg.busStops
           };
 
@@ -744,6 +806,7 @@
     var body = document.createElement('div');
     body.className = 'settings-body';
     body.appendChild(sectionGeneral());
+    body.appendChild(sectionTheme());
     body.appendChild(sectionRoster());
     body.appendChild(sectionStops());
     body.appendChild(sectionSync());

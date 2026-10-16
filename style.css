@@ -26,6 +26,11 @@
      (a percentage of the header); used in both orientations. */
   --weather-w: 30%;
 
+  /* Public-holiday colour. app.js sets these from `theme.holidayColor`
+     (--holiday-soft is the same colour at low alpha, for the cell tint). */
+  --holiday: #ff5b5b;
+  --holiday-soft: rgba(255, 91, 91, 0.14);
+
   --bg: #0b1220;
   --panel: #131c2e;
   --panel-2: #1b2740;
@@ -207,6 +212,12 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
 }
 .cal-cell.empty { background: transparent; cursor: default; }
 .cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.cal-cell.holiday { background: var(--holiday-soft); border-color: var(--holiday); }
+.cal-cell.holiday .cal-day { color: var(--holiday); }
+.cal-holiday {
+  font-size: 10px; font-weight: 700; color: var(--holiday);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .cal-cell:active:not(.empty) { background: #26365a; }
 
 .cal-top { display: flex; align-items: center; justify-content: space-between; }
@@ -265,6 +276,7 @@ section { background: var(--panel); border: 1px solid var(--line); border-radius
   box-shadow: 0 24px 60px rgba(0,0,0,0.5);
 }
 .modal-card h3 { margin: 0 0 14px; font-size: 20px; padding-right: 40px; }
+.modal-holiday { color: var(--holiday); font-size: 13px; font-weight: 700; margin: -8px 0 12px; }
 #modal-events { max-height: 40vh; overflow-y: auto; margin-bottom: 12px; }
 .modal-event {
   display: flex; align-items: center; gap: 10px;
@@ -445,6 +457,12 @@ select.inp { background-image: none; }
   border: 2px solid #04122a; cursor: pointer;
 }
 .range-val { min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* colour picker (public-holiday colour) */
+.inp.color { padding: 2px; height: 44px; width: 72px; flex: 0 0 auto; cursor: pointer; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+.swatch.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
 
 button.primary {
   background: var(--accent); color: #04122a; border: none; border-radius: 10px;

@@ -30,6 +30,7 @@ Defaults to `http://127.0.0.1:8080` and serves the repo root as static files.
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | `GET` | `/api/state` | – | `{ rev, updatedAt, config, events, weights }` |
+| `GET` | `/api/holidays` | – | `{ holidays: { 'YYYY-MM-DD': 'name' } }` (from 1823, cached weekly) |
 | `PUT` | `/api/config` \| `/api/events` \| `/api/weights` | the value | `{ ok, rev }` |
 | `POST` | `/api/login` | `{ password }` | sets a 1-year cookie |
 | `POST` | `/api/logout` | – | clears the cookie |

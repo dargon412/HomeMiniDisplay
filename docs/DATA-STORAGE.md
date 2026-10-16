@@ -7,9 +7,10 @@ sent to any server except the public bus/weather API calls.
 
 | localStorage key | What | Written by | Read by |
 |---|---|---|---|
-| `homeDashboard.config.v1` | Your settings (stops, roster, district, refresh, layout) | settings page | `DashboardConfig.load()` |
+| `homeDashboard.config.v1` | Your settings (stops, roster, district, refresh, layout, theme) | settings page | `DashboardConfig.load()` |
 | `homeDashboard.events.v1` | Calendar events | calendar modal | `loadEvents()` |
 | `homeDashboard.weights.v1` | Parrot weight, one value per day (grams) | calendar modal | `loadWeights()` |
+| `homeDashboard.holidays.v1` | Cached public holidays (`{at, data}`) | `loadHolidays()` | `loadHolidays()` |
 
 ## How config is resolved
 
@@ -99,6 +100,19 @@ Event text is rendered with `textContent`, so it is safe against HTML injection.
 - The 📈 chart button draws a native-SVG line chart (no libraries). Missing days are simply
   skipped — the line connects straight to the next recorded point. The range defaults to the last
   30 days and can be changed with the presets or a custom start/end date.
+
+## Public holidays
+
+- Bundled in `holidays.json` (parsed from the official 1823 iCal), keyed `YYYY-MM-DD` → name.
+  The 1823 endpoint sends **no CORS header**, so the browser cannot fetch it directly.
+- The app loads `holidays.json` (same-origin), caches it in `homeDashboard.holidays.v1`, and on the
+  Pi also fetches `/api/holidays` (which refreshes from 1823 at most weekly and caches on disk).
+- Holiday cells get the `theme.holidayColor` colour (see below) and the day popup shows the name.
+- Refresh the bundled file when a new year is gazetted: `python3 tools/update-holidays.py`.
+
+`theme.holidayColor` (a CSS hex colour, default `#ff5b5b`) is applied as the `--holiday` CSS
+variable; `--holiday-soft` is the same colour at low alpha for the cell tint. Editable in
+⚙️ → 外觀 Theme and included in the backup.
 
 ## Backup and restore
 

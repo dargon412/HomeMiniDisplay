@@ -51,6 +51,7 @@ import secrets
 import sys
 import threading
 import time
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
@@ -60,6 +61,9 @@ DATA_DIR = os.environ.get("HD_DATA_DIR") or os.path.join(HERE, "data")
 STATE_FILE = os.path.join(DATA_DIR, "state.json")
 AUTH_FILE = os.path.join(DATA_DIR, "auth.json")
 SECRET_FILE = os.path.join(DATA_DIR, "secret")
+HOLIDAYS_FILE = os.path.join(DATA_DIR, "holidays.json")
+HOLIDAYS_URL = "https://www.1823.gov.hk/common/ical/gc/tc.ics"
+HOLIDAYS_TTL = 7 * 24 * 3600          # refresh from 1823 at most weekly
 PORT = int(os.environ.get("HD_PORT", "8080"))
 BIND = os.environ.get("HD_BIND", "127.0.0.1")
 
@@ -163,6 +167,37 @@ def save_state(st):
     st["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     save_json_atomic(STATE_FILE, st)
     return st["rev"]
+
+
+def parse_holidays(ics):
+    """Parse the 1823 iCal into { 'YYYY-MM-DD': 'name' }."""
+    ics = re.sub(r"\r?\n[ \t]", "", ics)          # unfold RFC 5545 long lines
+    out = {}
+    for block in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", ics, re.S):
+        m = re.search(r"DTSTART;VALUE=DATE:(\d{8})", block)
+        s = re.search(r"SUMMARY:(.*)", block)
+        if not m or not s:
+            continue
+        d = m.group(1)
+        out["%s-%s-%s" % (d[0:4], d[4:6], d[6:8])] = s.group(1).strip()
+    return out
+
+
+def get_holidays():
+    """{date: name}, refreshed from 1823 at most once a week and cached on disk."""
+    cache = load_json(HOLIDAYS_FILE, None)
+    if isinstance(cache, dict) and cache.get("at") and (time.time() - cache["at"] < HOLIDAYS_TTL):
+        return cache.get("data", {})
+    try:
+        req = urllib.request.Request(HOLIDAYS_URL, headers={"User-Agent": "home-dashboard"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = parse_holidays(r.read().decode("utf-8"))
+        if data:
+            save_json_atomic(HOLIDAYS_FILE, {"at": int(time.time()), "data": data})
+            return data
+    except Exception as exc:                       # noqa: BLE001 - never fatal
+        sys.stderr.write("holidays fetch failed: %s\n" % exc)
+    return cache.get("data", {}) if isinstance(cache, dict) else {}
 
 
 # --------------------------------------------------------------------------
@@ -323,6 +358,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/state":
             st = load_state()
             return self._json(200, st)
+        if path == "/api/holidays":
+            return self._json(200, {"holidays": get_holidays()})
         if path.startswith("/api/") and path[5:] in COLLECTIONS:
             if method != "PUT":
                 return self._json(405, {"error": "method not allowed"})

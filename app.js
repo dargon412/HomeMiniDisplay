@@ -11,7 +11,7 @@
 
 /* Bump this whenever you change the app, so you can tell which build a
    device is running (shown in ⚙️ settings and logged on load). */
-var APP_VERSION = '2026-10-16.1';
+var APP_VERSION = '2026-10-16.2';
 
 /* ---------------- on-device tap diagnostics ----------------
    Open the page with ?debug=1 (e.g. .../HomeMiniDisplay/?debug=1)
@@ -193,9 +193,24 @@ function normalizeConfig() {
   }
   var ww = Number(CFG.layout.weatherWidth);
   CFG.layout.weatherWidth = (ww >= 15 && ww <= 100) ? ww : 30;
+  CFG.theme = CFG.theme || {};
+  CFG.theme.holidayColor = validColor(CFG.theme.holidayColor) ? CFG.theme.holidayColor : '#ff5b5b';
   LANG = CFG.weather.language || 'tc';
 }
 normalizeConfig();
+
+/* Accept #rgb / #rrggbb (and rgb()/named colours pass through for CSS, but we
+   only compute a soft tint for hex, so anything else falls back). */
+function validColor(c) {
+  return typeof c === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c.trim());
+}
+function hexToRgba(hex, a) {
+  var h = String(hex || '').replace('#', '').trim();
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return 'rgba(255,91,91,' + a + ')';
+  var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
 
 /* Push the bus-panel size into CSS. The one setting drives both:
    - landscape: bus panel WIDTH  (--bus-w), calendar takes the rest
@@ -232,6 +247,12 @@ function applyLayout() {
   var ww = Number(CFG.layout && CFG.layout.weatherWidth);
   if (!(ww >= 15 && ww <= 100)) ww = 30;
   root.setProperty('--weather-w', ww + '%');
+
+  // Public-holiday colour + a soft tint derived from it.
+  var hc = (CFG.theme && CFG.theme.holidayColor) || '#ff5b5b';
+  if (!validColor(hc)) hc = '#ff5b5b';
+  root.setProperty('--holiday', hc);
+  root.setProperty('--holiday-soft', hexToRgba(hc, 0.14));
 }
 applyLayout();
 
@@ -734,6 +755,54 @@ window.Sync = {
   status: function () { return { on: SYNC_ON, rev: SYNC_REV }; }
 };
 
+/* ============================================================
+   3c. PUBLIC HOLIDAYS
+   ------------------------------------------------------------
+   holidays.json is bundled (the official 1823 iCal has no CORS header, so the
+   browser cannot fetch it directly). On the Pi, /api/holidays refreshes it
+   live. The parsed map is also cached in localStorage for offline use.
+   ============================================================ */
+var HOLIDAYS = {};                       // "YYYY-MM-DD" -> name
+var HOLIDAYS_KEY = 'homeDashboard.holidays.v1';
+
+function setHolidays(obj) {
+  var out = {};
+  if (obj && typeof obj === 'object') {
+    for (var k in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, k) && /^\d{4}-\d{2}-\d{2}$/.test(k)) {
+        out[k] = String(obj[k]);
+      }
+    }
+  }
+  var n = 0;
+  for (var j in out) { if (Object.prototype.hasOwnProperty.call(out, j)) n++; }
+  if (n) {
+    HOLIDAYS = out;
+    try { localStorage.setItem(HOLIDAYS_KEY, JSON.stringify({ at: Date.now(), data: out })); } catch (e) {}
+  }
+  return n;
+}
+
+function loadHolidays() {
+  // Cached copy first, so holidays show immediately and work offline.
+  var hadCache = false;
+  try {
+    var cached = JSON.parse(localStorage.getItem(HOLIDAYS_KEY));
+    if (cached && cached.data) { HOLIDAYS = cached.data; hadCache = true; }
+  } catch (e) {}
+  if (hadCache) renderCalendar();
+  // Bundled file (same-origin; works on GitHub Pages).
+  fetch('holidays.json', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (obj) { if (setHolidays(obj)) renderCalendar(); })
+    .catch(function () {});
+  // Live from the Pi, if present (keeps future years current).
+  fetch('/api/holidays', { credentials: 'same-origin', cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (obj) { if (obj && setHolidays(obj.holidays)) renderCalendar(); })
+    .catch(function () {});
+}
+
 /* 4-day roster: compute the shift letter for a given date. */
 function rosterLetter(date) {
   var anchor = parseYmd(CFG.roster.anchorDate);
@@ -794,6 +863,11 @@ function renderCalendar() {
 
     var cell = el('div', 'cal-cell');
     if (key === todayKey) cell.classList.add('today');
+    var holiday = HOLIDAYS[key];
+    if (holiday) {
+      cell.classList.add('holiday');
+      cell.title = '公眾假期：' + holiday;
+    }
     cell.setAttribute('data-date', key);
     // No per-cell listener: day taps are handled by ONE delegated listener on
     // #cal-grid (see bindCalendarTaps). A per-cell listener is destroyed every
@@ -813,6 +887,8 @@ function renderCalendar() {
     if (letter) right.appendChild(badgeFor(letter));
     top.appendChild(right);
     cell.appendChild(top);
+
+    if (holiday) cell.appendChild(el('div', 'cal-holiday', holiday));
 
     if (hasWeight(weights, key)) {
       cell.appendChild(el('div', 'cal-weight', weights[key] + 'g'));
@@ -854,6 +930,12 @@ function openModal(key) {
   var d = parseYmd(key);
   $('modal-date').textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
     WEEKDAYS[d.getDay()] + '　' + (CFG.roster.labels[rosterLetter(d)] || rosterLetter(d) || '');
+  var holiEl = $('modal-holiday');
+  if (holiEl) {
+    var holi = HOLIDAYS[key];
+    holiEl.textContent = holi ? '🎉 公眾假期：' + holi : '';
+    holiEl.style.display = holi ? 'block' : 'none';
+  }
   renderModalEvents();
   renderModalWeight();
   $('modal').classList.remove('hidden');
@@ -1335,6 +1417,8 @@ function start() {
   showVersion();
   initTapDebug();
   tickClock();
+  // Read cached holidays before the first render so those days are marked.
+  loadHolidays();
   renderCalendar();
   buildBusSkeleton();
   loadBus();

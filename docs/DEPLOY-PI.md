@@ -193,6 +193,16 @@ sudo systemctl restart home-dashboard
 
 Then reload the page (the header shows the version bottom-left).
 
+Public holidays come from the official 1823 calendar. The server refreshes them
+at most once a week and caches them in `server/data/holidays.json`. The bundled
+`holidays.json` in the repo is the fallback for GitHub Pages; refresh it when a
+new year is gazetted:
+
+```bash
+python3 tools/update-holidays.py
+git add holidays.json && git commit -m "Update public holidays" && git push
+```
+
 ---
 
 ## Backup

@@ -13,11 +13,14 @@ calendar with addable events, and weather — all in one glance.
 ## Features
 
 - **Bus arrivals** — next 3 ETAs per stop/route, for KMB/LWB and Citybus.
-- **Calendar** — a 4-day roster cycle (早/夜/休) plus events you add by tapping a day.
+- **Calendar** — a 4-day roster cycle (早/夜/休) plus events you add by tapping a day, with Hong
+  Kong **public holidays** marked in a configurable colour.
+- **Parrot weight** — log a daily weight and view it as a line chart.
 - **Weather** — current conditions, a 7-day forecast strip, and per-day icons on the calendar.
-- **On-screen settings** — edit stops, roster, weather district and refresh interval from the ⚙️
-  page (no code editing needed).
-- **Backup** — one button exports settings *and* events to a single JSON file; import restores it.
+- **On-screen settings** — edit stops, roster, weather district, refresh interval, layout, fonts
+  and colours from the ⚙️ page (no code editing needed).
+- **Backup** — one button exports settings, events *and* weights to a single JSON file; import
+  restores it.
 
 ## Run locally
 

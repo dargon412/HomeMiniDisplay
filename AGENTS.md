@@ -43,6 +43,7 @@ and `window.openSettings` *before* `app.js` reads them. Keep the order if you to
 | `settings.js` | The ⚙️ settings page; owns read/write of saved config. IIFE exposing 2 globals. |
 | `app.js` | Dashboard: clock, weather, bus, calendar, refresh scheduling. Sections marked by banner comments. |
 | `tools.html` | Standalone bus-stop finder (settings has its own now). |
+| `holidays.json` | Bundled HK public holidays (`YYYY-MM-DD` → name). Regenerate with `tools/update-holidays.py`. |
 | `server/server.py` | Optional Pi server: static files + shared-state API + login. Stdlib only. |
 
 Customize-stop IDs come from `tools.html`; `docs/API.md` documents the exact endpoints.
