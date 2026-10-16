@@ -45,6 +45,7 @@ and `window.openSettings` *before* `app.js` reads them. Keep the order if you to
 | `tools.html` | Standalone bus-stop finder (settings has its own now). |
 | `holidays.json` | Bundled HK public holidays (`YYYY-MM-DD` → name). Regenerate with `tools/update-holidays.py`. |
 | `server/server.py` | Optional Pi server: static files + shared-state API + login. Stdlib only. |
+| `deploy/` | Pi systemd units + helper scripts (`pi-up.sh`, `backup-to-drive.sh`). No secrets. |
 
 Customize-stop IDs come from `tools.html`; `docs/API.md` documents the exact endpoints.
 

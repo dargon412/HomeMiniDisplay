@@ -36,6 +36,8 @@ python3 -m http.server 8000
 - `docs/API.md` — the government data endpoints
 - `docs/DATA-STORAGE.md` — config/events/weights storage and backup
 - `docs/DEPLOY-PI.md` — host it on a Raspberry Pi with shared data + remote access
+- `docs/PI-CHEATSHEET.md` — Pi recovery / everyday commands (one page)
+- `docs/BACKUP-GOOGLE-DRIVE.md` — daily auto-backup of events + weights to Google Drive
 - `docs/DEVELOPMENT.md` — conventions, release/caching, debugging
 - `AGENTS.md` — orientation for AI agents working in this repo
 

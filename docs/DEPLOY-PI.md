@@ -8,6 +8,13 @@ app on the phones** and **without paying for anything**.
 **Settings are per-device.** Bus stops, roster, layout, fonts and colours stay
 on each device; only events and weights are shared.
 
+> **After a reboot you normally do nothing** — everything auto-starts. If
+> something is not responding, run `~/HomeMiniDisplay/deploy/pi-up.sh`. See the
+> one-page [`PI-CHEATSHEET.md`](PI-CHEATSHEET.md).
+>
+> **Daily Google Drive backup** of events + weights:
+> [`BACKUP-GOOGLE-DRIVE.md`](BACKUP-GOOGLE-DRIVE.md).
+
 The Pi is behind a **fake IP (CGNAT)**, so a normal port-forward will not work.
 Instead we use **Tailscale Funnel**, which makes the Pi open an *outbound*
 connection and gives it a public HTTPS address. No app is needed on the phones.

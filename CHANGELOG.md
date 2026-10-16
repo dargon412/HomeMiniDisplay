@@ -5,6 +5,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Pi recovery + Google Drive backup tooling.** `deploy/pi-up.sh` brings the server and Tailscale
+  Funnel back up with one command; `deploy/backup-to-drive.sh` + a daily systemd timer copy the
+  shared events/weights (`server/data/state.json`) to Google Drive via rclone, keeping 30 days.
+  New one-page guides: `docs/PI-CHEATSHEET.md` and `docs/BACKUP-GOOGLE-DRIVE.md`. No front-end
+  change, so no version bump.
+
 ### Changed
 - **Sync now shares only events and parrot weights — settings stay per-device.** Each device keeps
   its own config (bus stops, roster, layout, fonts, colours); only calendar events and weights are

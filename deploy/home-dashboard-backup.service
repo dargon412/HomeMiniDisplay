@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up Home Dashboard events + weights to Google Drive
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Change User to match where you cloned the repo.
+User=pi
+ExecStart=/home/pi/HomeMiniDisplay/deploy/backup-to-drive.sh

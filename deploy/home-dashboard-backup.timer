@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily Home Dashboard Google Drive backup
+
+[Timer]
+# Every day at 03:30, with a little jitter. Persistent=true means a run missed
+# while the Pi was off happens shortly after it boots.
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target
