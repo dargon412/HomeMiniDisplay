@@ -11,7 +11,7 @@
 
 /* Bump this whenever you change the app, so you can tell which build a
    device is running (shown in ⚙️ settings and logged on load). */
-var APP_VERSION = '2026-10-16.2';
+var APP_VERSION = '2026-10-16.3';
 
 /* ---------------- on-device tap diagnostics ----------------
    Open the page with ?debug=1 (e.g. .../HomeMiniDisplay/?debug=1)
@@ -656,9 +656,11 @@ function hasWeight(obj, key) { return Object.prototype.hasOwnProperty.call(obj, 
    3b. OPTIONAL SHARED-STATE SYNC (Raspberry Pi server)
    ------------------------------------------------------------
    When this page is served by server/server.py (e.g. through Tailscale Funnel)
-   a /api/state endpoint exists, and every device shares one dataset. On GitHub
-   Pages that endpoint 404s, so we quietly stay localStorage-only.
+   a /api/state endpoint exists, and every device shares the same EVENTS and
+   WEIGHTS. Settings (config) are deliberately NOT synced - each device keeps
+   its own layout, stops, roster, colours, etc.
 
+   On GitHub Pages the endpoint 404s, so we quietly stay localStorage-only.
    localStorage stays the instant, synchronous store; the server is synced in
    the background (local-first), so the dashboard keeps working offline.
    ============================================================ */
@@ -666,25 +668,15 @@ var SYNC_ON = false;
 var SYNC_REV = 0;
 var SYNC_APPLYING = false;
 
+/* Only events + weights are shared. Config is intentionally left alone. */
 function syncApplyState(state) {
   SYNC_APPLYING = true;
   try {
-    if (state.config) localStorage.setItem('homeDashboard.config.v1', JSON.stringify(state.config));
     if (state.events) localStorage.setItem(EVENTS_KEY, JSON.stringify(state.events));
     if (state.weights) localStorage.setItem(WEIGHTS_KEY, JSON.stringify(state.weights));
   } catch (e) { /* private mode */ }
   SYNC_REV = state.rev || 0;
   SYNC_APPLYING = false;
-}
-
-/* Re-read the freshly applied config and rebuild the screen. */
-function syncRerender() {
-  CFG = (window.DashboardConfig && window.DashboardConfig.load) ? window.DashboardConfig.load() : CFG;
-  normalizeConfig();
-  applyLayout();
-  renderCalendar();
-  buildBusSkeleton();
-  loadBus();
 }
 
 /* Pull the server state; re-render if it changed. */
@@ -696,7 +688,7 @@ function syncPull(force) {
       if (!state || typeof state.rev === 'undefined') return;
       if (!force && state.rev === SYNC_REV) return;
       syncApplyState(state);
-      syncRerender();
+      renderCalendar();
     })
     .catch(function () { /* offline: keep using localStorage */ });
 }
@@ -716,7 +708,6 @@ function syncPush(collection, value) {
 
 function syncLocalHasData() {
   try {
-    if (localStorage.getItem('homeDashboard.config.v1')) return true;
     if (localStorage.getItem(EVENTS_KEY)) return true;
     if (localStorage.getItem(WEIGHTS_KEY)) return true;
   } catch (e) {}
@@ -730,16 +721,15 @@ function detectSync() {
       SYNC_ON = true;
       var hasEvents = state.events && Object.keys(state.events).length;
       var hasWeights = state.weights && Object.keys(state.weights).length;
-      var empty = !state || (!state.config && !hasEvents && !hasWeights);
+      var empty = !state || (!hasEvents && !hasWeights);
       if (empty && syncLocalHasData()) {
-        // First device to reach a fresh server seeds it from its local data.
+        // First device to reach a fresh server seeds it with its events/weights.
         SYNC_REV = state.rev || 0;
-        syncPush('config', CFG);
         syncPush('events', loadEvents());
         syncPush('weights', loadWeights());
       } else if (state.rev !== SYNC_REV) {
         syncApplyState(state);
-        syncRerender();
+        renderCalendar();
       } else {
         SYNC_REV = state.rev || 0;
       }
@@ -748,9 +738,8 @@ function detectSync() {
     .catch(function () { SYNC_ON = false; });
 }
 
-/* Settings.js (loaded before this file) pushes config changes through here. */
+/* Settings page reads status / triggers a manual pull through here. */
 window.Sync = {
-  pushConfig: function (cfg) { syncPush('config', cfg); },
   pull: function () { syncPull(true); },
   status: function () { return { on: SYNC_ON, rev: SYNC_REV }; }
 };
@@ -802,6 +791,51 @@ function loadHolidays() {
     .then(function (obj) { if (obj && setHolidays(obj.holidays)) renderCalendar(); })
     .catch(function () {});
 }
+
+/* Manual refresh (the settings button). Prefers the Pi's live 1823 fetch
+   (force-refresh), and falls back to the bundled file on GitHub Pages. */
+function updateHolidays(cb) {
+  fetch('/api/holidays?refresh=1', { credentials: 'same-origin', cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (obj) {
+      if (obj && obj.holidays && Object.keys(obj.holidays).length) {
+        return { src: 'Pi', data: obj.holidays };
+      }
+      return fetch('holidays.json', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { return d ? { src: 'bundled', data: d } : null; });
+    })
+    .then(function (res) {
+      if (!res) { if (cb) cb(false, null); return; }
+      setHolidays(res.data);
+      renderCalendar();
+      if (cb) cb(true, res.src);
+    })
+    .catch(function () { if (cb) cb(false, null); });
+}
+
+function holidayYears() {
+  var seen = {}, out = [];
+  for (var k in HOLIDAYS) {
+    if (!Object.prototype.hasOwnProperty.call(HOLIDAYS, k)) continue;
+    var y = k.slice(0, 4);
+    if (!seen[y]) { seen[y] = 1; out.push(y); }
+  }
+  out.sort();
+  return out;
+}
+function holidayCount() {
+  var n = 0;
+  for (var k in HOLIDAYS) { if (Object.prototype.hasOwnProperty.call(HOLIDAYS, k)) n++; }
+  return n;
+}
+
+/* Settings page uses these. */
+window.Holidays = {
+  years: holidayYears,
+  count: holidayCount,
+  update: updateHolidays
+};
 
 /* 4-day roster: compute the shift letter for a given date. */
 function rosterLetter(date) {

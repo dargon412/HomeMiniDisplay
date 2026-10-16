@@ -1,8 +1,10 @@
 # server/
 
-A tiny, dependency-free Python server so several devices can share one copy of
-the dashboard data (bus stops, calendar events, parrot weights) and so the
-dashboard can be reached from outside the home through Tailscale Funnel.
+A tiny, dependency-free Python server so several devices can share the same
+**calendar events and parrot weights** and so the dashboard can be reached from
+outside the home through Tailscale Funnel. (Per-device settings are not shared;
+the `/api/config` endpoint is kept for compatibility but the client does not use
+it.)
 
 **Full setup guide: [`../docs/DEPLOY-PI.md`](../docs/DEPLOY-PI.md).**
 

@@ -1,9 +1,12 @@
 # Deploy on a Raspberry Pi (shared data + remote access)
 
 This turns a Raspberry Pi at home into the dashboard host, so your tablet, your
-phone and your wife's phone all see **the same** bus stops, events and parrot
+phone and your wife's phone all see **the same** calendar events and parrot
 weights — and you can reach it from outside the house, **without installing any
 app on the phones** and **without paying for anything**.
+
+**Settings are per-device.** Bus stops, roster, layout, fonts and colours stay
+on each device; only events and weights are shared.
 
 The Pi is behind a **fake IP (CGNAT)**, so a normal port-forward will not work.
 Instead we use **Tailscale Funnel**, which makes the Pi open an *outbound*

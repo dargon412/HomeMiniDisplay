@@ -53,7 +53,7 @@ import threading
 import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB_ROOT = os.environ.get("HD_WEB_ROOT") or os.path.dirname(HERE)
@@ -183,10 +183,11 @@ def parse_holidays(ics):
     return out
 
 
-def get_holidays():
-    """{date: name}, refreshed from 1823 at most once a week and cached on disk."""
+def get_holidays(force=False):
+    """{date: name}, refreshed from 1823 at most once a week (or now if force)."""
     cache = load_json(HOLIDAYS_FILE, None)
-    if isinstance(cache, dict) and cache.get("at") and (time.time() - cache["at"] < HOLIDAYS_TTL):
+    if (not force and isinstance(cache, dict) and cache.get("at")
+            and (time.time() - cache["at"] < HOLIDAYS_TTL)):
         return cache.get("data", {})
     try:
         req = urllib.request.Request(HOLIDAYS_URL, headers={"User-Agent": "home-dashboard"})
@@ -359,7 +360,9 @@ class Handler(BaseHTTPRequestHandler):
             st = load_state()
             return self._json(200, st)
         if path == "/api/holidays":
-            return self._json(200, {"holidays": get_holidays()})
+            qs = parse_qs(urlparse(self.path).query)
+            force = qs.get("refresh", ["0"])[0] in ("1", "true", "yes")
+            return self._json(200, {"holidays": get_holidays(force)})
         if path.startswith("/api/") and path[5:] in COLLECTIONS:
             if method != "PUT":
                 return self._json(405, {"error": "method not allowed"})

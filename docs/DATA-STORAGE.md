@@ -116,9 +116,10 @@ variable; `--holiday-soft` is the same colour at low alpha for the cell tint. Ed
 
 ## Backup and restore
 
-> **Raspberry Pi hosts:** if you run the optional `server/`, the shared data
-> lives in `server/data/state.json` and the front-end syncs it automatically.
-> The export/import below still works and is the easiest way to move data.
+> **Raspberry Pi hosts:** if you run the optional `server/`, **events and weights** are shared
+> through `server/data/state.json` and synced automatically across devices. **Settings (config) are
+> per-device and are not synced.** The export/import below still works and is the easiest way to
+> move everything.
 
 The settings page (**⚙️ → 備份**) provides:
 

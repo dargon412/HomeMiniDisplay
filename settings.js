@@ -58,8 +58,7 @@
   function save(cfg) {
     try { localStorage.setItem(KEY, JSON.stringify(cfg)); }
     catch (e) { alert('儲存失敗：' + e.message); }
-    // If the Pi server is serving this page, share the change with other devices.
-    if (window.Sync && window.Sync.pushConfig) window.Sync.pushConfig(cfg);
+    // Settings are per-device and intentionally NOT synced to the Pi.
   }
 
   function reset() { localStorage.removeItem(KEY); }
@@ -601,6 +600,47 @@
   }
 
   /* ============================================================
+     PUBLIC HOLIDAYS
+     ============================================================ */
+  function sectionHolidays() {
+    var s = makeSection('公眾假期 Holidays');
+    var H = window.Holidays || { years: function () { return []; }, count: function () { return 0; },
+                                 update: function (cb) { if (cb) cb(false, null); } };
+
+    var info = document.createElement('p');
+    info.className = 'sf-hint';
+    function refreshInfo() {
+      var yrs = H.years();
+      var n = H.count();
+      info.textContent = n
+        ? ('已載入 ' + n + ' 日' + (yrs.length ? '（' + yrs[0] + '–' + yrs[yrs.length - 1] + '）' : ''))
+        : '未載入假期資料。';
+    }
+    refreshInfo();
+    s.body.appendChild(info);
+
+    var btn = button('🔄 更新假期 Update holidays', 'ghost', function () {
+      btn.disabled = true;
+      btn.textContent = '更新中… Updating…';
+      H.update(function (ok, src) {
+        btn.disabled = false;
+        btn.textContent = '🔄 更新假期 Update holidays';
+        refreshInfo();
+        if (!ok) { alert('更新失敗：請檢查網絡。'); return; }
+        alert('假期已更新' + (src === 'Pi' ? '（由 1823 即時下載）' : '（使用內置檔案）') +
+          '：' + H.count() + ' 日，' + H.years().join('、') + '。');
+      });
+    });
+    s.body.appendChild(btn);
+
+    var note = document.createElement('p');
+    note.className = 'sf-hint';
+    note.textContent = '由官方 1823 日曆更新。喺 Pi 上會即時下載（每年一次就夠）；喺 GitHub Pages 就用內置檔案。';
+    s.body.appendChild(note);
+    return s.el;
+  }
+
+  /* ============================================================
      SYNC (Raspberry Pi shared state)
      ============================================================ */
   function sectionSync() {
@@ -609,7 +649,8 @@
     var info = document.createElement('p');
     info.className = 'sf-hint';
     if (st.on) {
-      info.textContent = '✅ 已連線 Raspberry Pi — 活動、體重、設定會同其他裝置共用（rev ' + st.rev + '）。';
+      info.textContent = '✅ 已連線 Raspberry Pi — 活動同鸚鵡體重會同其他裝置共用（rev ' + st.rev +
+        '）。設定（巴士站、版面、顏色…）係每部機自己嘅，唔會同步。';
     } else {
       info.textContent = '未啟用：此頁唔係由 Pi server 提供（例如 GitHub Pages），資料只存喺本機。';
     }
@@ -807,6 +848,7 @@
     body.className = 'settings-body';
     body.appendChild(sectionGeneral());
     body.appendChild(sectionTheme());
+    body.appendChild(sectionHolidays());
     body.appendChild(sectionRoster());
     body.appendChild(sectionStops());
     body.appendChild(sectionSync());

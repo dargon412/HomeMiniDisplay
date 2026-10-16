@@ -5,6 +5,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Sync now shares only events and parrot weights — settings stay per-device.** Each device keeps
+  its own config (bus stops, roster, layout, fonts, colours); only calendar events and weights are
+  synced through the Pi. The ⚙️ → 同步 text says so.
+- **⚙️ → 公眾假期 Holidays: a "🔄 更新假期" button.** It force-refreshes the holiday data — live from
+  1823 on the Pi (`/api/holidays?refresh=1`), or the bundled file on GitHub Pages — and reports the
+  years loaded.
+
 ### Added
 - **Hong Kong public holidays in the calendar.** Holidays are marked with a colour (tinted cell,
   coloured border, day number and name) and shown in the day popup. Data comes from the official
@@ -15,8 +23,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   picker), applied live via the `--holiday` / `--holiday-soft` CSS variables, stored in
   `theme.holidayColor` and included in the backup/import.
 - **Optional shared-state sync + a Raspberry Pi host.** A new dependency-free
-  Python server (`server/server.py`) serves the static files, stores one shared
-  copy of config/events/weights (`server/data/state.json`), and adds a
+  Python server (`server/server.py`) serves the static files, stores a shared
+  copy of events and weights (`server/data/state.json`), and adds a
   password login with a 1-year cookie. The front-end now **detects** the server
   (`GET /api/state`): when present it syncs in the background (local-first,
   ~15 s poll, push on every save, seed the server from the first device), and
